@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdsMoney - Anúncios</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #28a745;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+        }
+        .ad-container {
+            padding: 20px;
+        }
+        .ad {
+            background-color: #fff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .ad button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .ad button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .ad button:hover:enabled {
+            background-color: #0056b3;
+        }
+        #success-message {
+            display: none;
+            color: green;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Ganhos: $ <span id="earnings">0.0000</span>
+        <span id="countdown">30</span> segundos restantes
+        <form id="withdraw-form">
+            <input type="hidden" name="paypalEmail" id="paypalEmail">
+            <input type="hidden" name="fullName" id="fullName">
+            <input type="hidden" name="amount" id="amount">
+            <button type="button" onclick="withdraw()">SAQUE</button>
+        </form>
+        <div id="success-message">Saque realizado com sucesso. Em até 48h seus ganhos estarão disponíveis.</div>
+    </header>
+    <div class="ad-container" id="ad-container">
+        <!-- Anúncios serão gerados aqui -->
+    </div>
+
+    <script>
+        let earnings = parseFloat(localStorage.getItem('earnings')) || 0;
+        let countdown = 30;
+        let adWindow;
+        let adInterval;
+        const countdownElement = document.getElementById('countdown');
+        const earningsElement = document.getElementById('earnings');
+        earningsElement.innerText = earnings.toFixed(4);
+
+        function createAd() {
+            const adContainer = document.getElementById('ad-container');
+            const ad = document.createElement('div');
+            ad.className = 'ad';
+            ad.innerHTML = `
+                <p>Clique abaixo para ver o anúncio</p>
+                <button onclick="viewAd(this)">Ver anúncio</button>
+            `;
+            adContainer.appendChild(ad);
+        }
+
+        function viewAd(button) {
+            button.disabled = true;
+            adWindow = window.open('https://www.highratecpm.com/v0381trh6?key=99d179ce005ba9b5734b20cafd322700', '_blank', 'width=800,height=600');
+            countdown = 30;
+            countdownElement.innerText = countdown;
+
+            adInterval = setInterval(() => {
+                countdown--;
+                countdownElement.innerText = countdown;
+                if (countdown === 0) {
+                    clearInterval(adInterval);
+                    adWindow.close();
+                    earnings += 0.01;
+                    localStorage.setItem('earnings', earnings);
+                    earningsElement.innerText = earnings.toFixed(4);
+                    createAd();
+                }
+            }, 1000);
+
+            const checkWindowClosed = setInterval(() => {
+                if (adWindow.closed) {
+                    clearInterval(checkWindowClosed);
+                    clearInterval(adInterval);
+                    if (countdown > 0) {
+                        alert('Você fechou o anúncio antes do tempo. Nenhum ganho foi adicionado.');
+                    }
+                }
+            }, 1000);
+        }
+
+        function withdraw() {
+            if (earnings < 0.01) {
+                alert('O valor mínimo para saque é $0.01.');
+                return;
+            }
+
+            document.getElementById('paypalEmail').value = localStorage.getItem('paypalEmail');
+            document.getElementById('fullName').value = localStorage.getItem('fullName');
+            document.getElementById('amount').value = earnings.toFixed(4);
+
+            fetch('/withdraw', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(new FormData(document.getElementById('withdraw-form')))
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    document.getElementById('success-message').style.display = 'block';
+                    earnings = 0;
+                    localStorage.setItem('earnings', earnings);
+                    earningsElement.innerText = earnings.toFixed(4);
+                }
+            })
+            .catch(error => console.error('Erro:', error));
+        }
+
+        // Gerar anúncios iniciais
+        for (let i = 0; i < 10; i++) {
+            createAd();
+        }
+
+        // Carregar mais anúncios ao rolar a página
+        window.onscroll = () => {
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
+                createAd();
+            }
+        };
+    </script>
+</body>
+</html>
