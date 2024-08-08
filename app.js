@@ -3,10 +3,21 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const ExcelJS = require('exceljs');
 const fs = require('fs');
+const session = require('express-session');
 
 const app = express();
+
+// Configuração do middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Configuração das sessões
+app.use(session({
+    secret: 'maktatus45', // Troque por uma string secreta de sua escolha
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: true } // Defina como true se estiver usando HTTPS
+}));
 
 const workbook = new ExcelJS.Workbook();
 const filePath = path.join(__dirname, 'AdsMoney', 'banco_de_dados.xlsx');
@@ -22,7 +33,11 @@ app.get('/ads', (req, res) => {
 app.post('/login', (req, res) => {
     const email = req.body['paypalEmail'];
     const name = req.body['fullname'];
-    // Aqui, você pode armazenar os dados de login se necessário
+
+    // Armazenando os dados na sessão
+    req.session.email = email;
+    req.session.name = name;
+
     res.redirect('/ads');
 });
 
