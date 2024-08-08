@@ -1,9 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-const ExcelJS = require('exceljs');
 const fs = require('fs');
 const session = require('express-session');
+const { google } = require('googleapis');
 
 const app = express();
 
@@ -19,8 +19,18 @@ app.use(session({
     cookie: { secure: false } // Defina como false para testes em HTTP
 }));
 
-const workbook = new ExcelJS.Workbook();
-const filePath = path.join(__dirname, 'AdsMoney', 'banco_de_dados.xlsx');
+// Carregar credenciais
+const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, 'credentials.json')));
+
+// Configurar autenticação
+const oAuth2Client = new google.auth.OAuth2(
+    credentials.client_id,
+    credentials.client_secret,
+    credentials.redirect_uris[0]
+);
+oAuth2Client.setCredentials({ refresh_token: credentials.refresh_token });
+
+const sheets = google.sheets({ version: 'v4', auth: oAuth2Client });
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -42,31 +52,21 @@ app.post('/login', (req, res) => {
 });
 
 app.post('/withdraw', async (req, res) => {
-    const email = req.body.paypalEmail;
-    const name = req.body.fullName;
+    const email = req.session.email;
+    const name = req.session.name;
     const amount = req.body.amount;
 
     try {
-        // Verificando se o arquivo existe e lendo o arquivo existente ou criando um novo se não existir
-        if (fs.existsSync(filePath)) {
-            await workbook.xlsx.readFile(filePath);
-        } else {
-            const sheet = workbook.addWorksheet('Planilha1');
-            sheet.columns = [
-                { header: 'Email', key: 'email' },
-                { header: 'Nome', key: 'name' },
-                { header: 'Valor', key: 'amount' }
-            ];
-        }
+        await sheets.spreadsheets.values.append({
+            spreadsheetId: '11h0-hghVBh2dracRerQlUalGXrPe9mQhlBMZ7yhzv6o', // Substitua pelo ID da sua planilha
+            range: 'Página1!A1', // Substitua pelo intervalo da sua planilha
+            valueInputOption: 'RAW',
+            resource: {
+                values: [[email, name, amount]],
+            },
+        });
 
-        const sheet = workbook.getWorksheet('Planilha1');
-        // Adicionando nova linha
-        sheet.addRow({ email, name, amount });
-
-        // Salvando a planilha
-        await workbook.xlsx.writeFile(filePath);
-
-        res.json({ message: 'Saque realizado com sucesso. Em até 48h seus ganhos estarão disponíveis.' });
+        res.json({ message: 'Saque realizado com sucesso.' });
     } catch (error) {
         console.error('Erro ao processar o saque:', error);
         res.status(500).json({ message: 'Erro ao processar o saque.' });
