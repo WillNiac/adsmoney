@@ -2,12 +2,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const ExcelJS = require('exceljs');
+const fs = require('fs');
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const workbook = new ExcelJS.Workbook();
+const filePath = path.join(__dirname, 'AdsMoney', 'banco_de_dados.xlsx');
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -18,8 +20,8 @@ app.get('/ads', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-    const email = req.body['paypal-email'];
-    const name = req.body['full-name'];
+    const email = req.body['paypalEmail'];
+    const name = req.body['fullname'];
     // Aqui, você pode armazenar os dados de login se necessário
     res.redirect('/ads');
 });
@@ -30,13 +32,11 @@ app.post('/withdraw', async (req, res) => {
     const amount = req.body.amount;
 
     try {
-        // Lendo o arquivo existente ou criando um novo se não existir
-        await workbook.xlsx.readFile('AdsMoney/banco_de_dados.xlsx').catch(() => {});
-        let sheet = workbook.getWorksheet('Página1');
-
-        if (!sheet) {
-            // Criando a planilha se não existir
-            sheet = workbook.addWorksheet('Página1');
+        // Verificando se o arquivo existe e lendo o arquivo existente ou criando um novo se não existir
+        if (fs.existsSync(filePath)) {
+            await workbook.xlsx.readFile(filePath);
+        } else {
+            const sheet = workbook.addWorksheet('Planilha1');
             sheet.columns = [
                 { header: 'Email', key: 'email' },
                 { header: 'Nome', key: 'name' },
@@ -44,11 +44,12 @@ app.post('/withdraw', async (req, res) => {
             ];
         }
 
+        const sheet = workbook.getWorksheet('Planilha1');
         // Adicionando nova linha
         sheet.addRow({ email, name, amount });
 
         // Salvando a planilha
-        await workbook.xlsx.writeFile('AdsMoney/banco_de_dados.xlsx');
+        await workbook.xlsx.writeFile(filePath);
 
         res.json({ message: 'Saque realizado com sucesso. Em até 48h seus ganhos estarão disponíveis.' });
     } catch (error) {
