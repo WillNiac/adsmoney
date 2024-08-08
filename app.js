@@ -42,6 +42,9 @@ app.post('/login', (req, res) => {
     req.session.email = email;
     req.session.name = name;
 
+    // Verificando se os dados foram armazenados corretamente
+    console.log('Sessão:', req.session);
+
     res.redirect('/ads');
 });
 
