@@ -27,6 +27,10 @@ app.get('/', (req, res) => {
 });
 
 app.get('/ads', (req, res) => {
+    if (!req.session.email || !req.session.name) {
+        // Se não houver dados de sessão, redirecione para o login
+        return res.redirect('/');
+    }
     res.sendFile(path.join(__dirname, 'public', 'ads.html'));
 });
 
