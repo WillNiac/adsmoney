@@ -16,7 +16,7 @@ app.use(session({
     secret: 'maktatus45', // Troque por uma string secreta de sua escolha
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: true } // Defina como true se estiver usando HTTPS
+    cookie: { secure: false } // Defina como false para testes em HTTP
 }));
 
 const workbook = new ExcelJS.Workbook();
@@ -27,10 +27,6 @@ app.get('/', (req, res) => {
 });
 
 app.get('/ads', (req, res) => {
-    if (!req.session.email || !req.session.name) {
-        // Se não houver dados de sessão, redirecione para o login
-        return res.redirect('/');
-    }
     res.sendFile(path.join(__dirname, 'public', 'ads.html'));
 });
 
@@ -41,9 +37,6 @@ app.post('/login', (req, res) => {
     // Armazenando os dados na sessão
     req.session.email = email;
     req.session.name = name;
-
-    // Verificando se os dados foram armazenados corretamente
-    console.log('Sessão:', req.session);
 
     res.redirect('/ads');
 });
