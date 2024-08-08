@@ -1,0 +1,13 @@
+{
+  "name": "ads-money",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2"
+  }
+}
